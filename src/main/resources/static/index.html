@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Помощник в изучении языка 1С</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="#/" class="logo">1С — Помощник</a>
+      <nav>
+        <a href="#/">Главная</a>
+        <span id="nav-guest">
+          <a href="#/login">Вход</a>
+          <a href="#/register">Регистрация</a>
+        </span>
+        <span id="nav-user" class="hidden">
+          <a href="#/profile">Профиль</a>
+          <a href="#" id="logout-btn">Выход</a>
+        </span>
+        <span id="nav-admin" class="hidden">
+          <a href="#/admin">Админ</a>
+        </span>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app" class="container">
+    <div id="view-loading" class="loading">Загрузка...</div>
+    <div id="view-main" class="hidden"></div>
+    <div id="view-topic" class="hidden"></div>
+    <div id="view-tasks" class="hidden"></div>
+    <div id="view-task" class="hidden"></div>
+    <div id="view-login" class="hidden"></div>
+    <div id="view-register" class="hidden"></div>
+    <div id="view-profile" class="hidden"></div>
+    <div id="view-admin" class="hidden"></div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

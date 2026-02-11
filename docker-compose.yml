@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: 1chelper
+      POSTGRES_USER: 1chelper
+      POSTGRES_PASSWORD: 1chelper
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 1chelper -d 1chelper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      platforms:
+        - linux/amd64
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: 1chelper
+      POSTGRES_USER: 1chelper
+      POSTGRES_PASSWORD: 1chelper
+      CODE_RUNNER_WORK_DIR: /app/run
+      CODE_RUNNER_OSCRIPT_COMMAND: /opt/onescript/oscript
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

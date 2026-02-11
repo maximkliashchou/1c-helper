@@ -1,0 +1,44 @@
+logging:
+  level:
+    ru.chelper.service.CodeExecutionService: INFO
+
+spring:
+  application:
+    name: 1c-helper
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:1chelper}
+    username: ${POSTGRES_USER:1chelper}
+    password: ${POSTGRES_PASSWORD:1chelper}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:1cHelperSecretKeyForJwtTokenGenerationMustBeLongEnough}
+  expiration-ms: 86400000
+
+# Upload
+spring.servlet.multipart:
+  max-file-size: 1MB
+  max-request-size: 1MB
+
+# Запуск кода 1С через OneScript (oscript)
+# В Docker задайте CODE_RUNNER_WORK_DIR=/app/run чтобы не использовать /tmp (noexec)
+code-runner:
+  use-real-runner: true
+  timeout-seconds: 10
+  oscript-command: oscript
+  work-dir: ${CODE_RUNNER_WORK_DIR:}
