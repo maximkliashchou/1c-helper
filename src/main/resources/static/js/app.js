@@ -516,6 +516,22 @@ async function renderAdmin() {
       }
     });
   });
+  document.getElementById('view-admin').querySelectorAll('.edit-topic-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const title = prompt('Новое название темы:');
+        if (!title) return;
+        const description = prompt('Описание:') || '';
+        const content = prompt('Содержимое:') || '';
+        try {
+          await apiClient.admin.updateTopic(id, { title, description, content });
+          alert('Тема обновлена');
+          renderAdmin();
+        } catch (e) {
+          alert(e.message);
+        }
+      });
+    });
 }
 
 window.addEventListener('hashchange', render);
