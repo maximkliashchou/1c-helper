@@ -280,6 +280,55 @@ async function renderTask(taskId) {
       });
     });
   }
+  if (currentUser) {
+
+    const adminHtml = `
+      <div class="editor-wrap" style="margin-top:2rem;">
+        <h2 style="margin-bottom:0.5rem;">Тесты задачи</h2>
+        <p class="meta">Добавление тест-кейсов для автопроверки</p>
+
+        <label>Input</label>
+        <textarea id="test-input" class="code-editor" placeholder="Входные данные теста..."></textarea>
+
+        <label style="margin-top:1rem;">Expected output</label>
+        <textarea id="test-output" class="code-editor" placeholder="Ожидаемый результат..."></textarea>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" id="add-test-btn">Добавить тест</button>
+        </div>
+
+        <div id="add-test-result"></div>
+      </div>
+    `;
+
+    document.getElementById('view-task').insertAdjacentHTML('beforeend', adminHtml);
+
+    document.getElementById('add-test-btn').addEventListener('click', async () => {
+      const input = document.getElementById('test-input').value;
+      const expectedOutput = document.getElementById('test-output').value;
+      const resultEl = document.getElementById('add-test-result');
+
+      if (!expectedOutput.trim()) {
+        resultEl.innerHTML = '<div class="result-box error">Введите expectedOutput</div>';
+        return;
+      }
+
+      resultEl.innerHTML = '<div class="loading">Добавление теста...</div>';
+
+      try {
+        await apiClient.admin.addTest(taskId, input, expectedOutput);
+
+        resultEl.innerHTML = '<div class="result-box success">✓ Тест успешно добавлен</div>';
+
+        document.getElementById('test-input').value = '';
+        document.getElementById('test-output').value = '';
+
+      } catch (e) {
+        resultEl.innerHTML = '<div class="result-box error">' + escapeHtml(e.message) + '</div>';
+      }
+    });
+  }
+
 }
 
 function renderLogin() {
