@@ -1,5 +1,11 @@
 let currentUser = null;
 
+let dragIndex = null;
+
+let topicBlocks = [
+  { id: Date.now(), type: 'text', content: '' }
+];
+
 function showView(id) {
   document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
   const v = document.getElementById('view-' + id);
@@ -85,6 +91,8 @@ async function render() {
       await renderProfile(id || (currentUser && currentUser.username));
     } else if (path === 'admin') {
       await renderAdmin();
+    } else if (path === 'create-topic') {
+      renderCreateTopic();
     } else {
       await renderMain();
     }
@@ -532,24 +540,12 @@ async function renderAdmin() {
           </li>
         `).join('')}
       </ul>
-      <button class="btn btn-primary" id="admin-add-topic">+ Добавить тему</button>
+      <a href="#/create-topic" class="btn btn-primary">+ Добавить тему</a>
     </div>
     <p class="meta">Редактирование тем и задач: через API (PUT /api/admin/topics/:id, POST /api/admin/topics/:topicId/tasks). Добавление тестов: POST /api/admin/tasks/:taskId/tests с body { "input": "...", "expectedOutput": "..." }. Минимум 4 теста на задачу.</p>
   `;
   document.getElementById('view-admin').innerHTML = html;
   showView('admin');
-  document.getElementById('admin-add-topic').addEventListener('click', async () => {
-    const title = prompt('Название темы:');
-    if (!title) return;
-    const description = prompt('Краткое описание (необязательно):') || '';
-    const content = prompt('Содержимое темы (HTML/текст, необязательно):') || '';
-    try {
-      await apiClient.admin.createTopic({ title, description, content, sortOrder: 0 });
-      renderAdmin();
-    } catch (e) {
-      alert(e.message);
-    }
-  });
   document.getElementById('view-admin').querySelectorAll('.add-task-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const topicId = btn.dataset.topicId;
@@ -582,7 +578,221 @@ async function renderAdmin() {
       });
     });
 }
+function updateBlock(id, value) {
+  const block = topicBlocks.find(b => b.id === id);
+  if (block) {
+    block.content = value;
+  }
+}
 
+function deleteBlock(id) {
+  topicBlocks = topicBlocks.filter(b => b.id !== id);
+  renderBlocks();
+}
+
+function renderBlocks() {
+  const container = document.getElementById('blocks-container');
+  container.innerHTML = '';
+
+  topicBlocks.forEach((block, index) => {
+    const el = document.createElement('div');
+    el.className = 'block';
+    el.draggable = true;
+
+    // DRAG START
+    el.addEventListener('dragstart', () => {
+      dragIndex = index;
+      el.classList.add('dragging');
+    });
+
+    // DRAG END
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+    });
+
+    // DRAG OVER
+    el.addEventListener('dragover', (e) => {
+      e.preventDefault(); // обязательно!
+      el.classList.add('drag-over');
+    });
+
+    el.addEventListener('dragleave', () => {
+      el.classList.remove('drag-over');
+    });
+
+    // DROP
+    el.addEventListener('drop', () => {
+      el.classList.remove('drag-over');
+
+      if (dragIndex === null || dragIndex === index) return;
+
+      const moved = topicBlocks.splice(dragIndex, 1)[0];
+      topicBlocks.splice(index, 0, moved);
+
+      dragIndex = null;
+      renderBlocks();
+    });
+
+    // --- HEADER ---
+    const header = document.createElement('div');
+    header.className = 'block-header';
+
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = block.type;
+
+    header.appendChild(badge);
+
+    // --- CONTENT ---
+    let input;
+
+    if (block.type === 'text' || block.type === 'code') {
+      input = document.createElement('textarea');
+      input.className = 'code-editor';
+      input.value = block.content;
+
+      input.addEventListener('input', (e) => {
+        updateBlock(block.id, e.target.value);
+      });
+    }
+
+    if (block.type === 'image') {
+      const wrapper = document.createElement('div');
+
+      const urlInput = document.createElement('input');
+      urlInput.type = 'text';
+      urlInput.placeholder = 'https://...';
+      urlInput.value = block.content;
+
+      urlInput.addEventListener('input', (e) => {
+        updateBlock(block.id, e.target.value);
+        renderBlocks();
+      });
+
+      wrapper.appendChild(urlInput);
+
+      if (block.content) {
+        const img = document.createElement('img');
+        img.src = block.content;
+        img.style.maxWidth = '100%';
+        img.style.marginTop = '10px';
+        wrapper.appendChild(img);
+      }
+
+      input = wrapper;
+    }
+
+    // --- CONTROLS ---
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+
+    const del = document.createElement('button');
+    del.className = 'btn btn-secondary';
+    del.textContent = 'Удалить';
+    del.onclick = () => deleteBlock(block.id);
+
+    controls.append(del);
+
+    el.append(header, input, controls);
+    container.appendChild(el);
+  });
+}function renderCreateTopic() {
+  topicBlocks = [
+    { id: Date.now(), type: 'text', content: '' }
+  ];
+
+  const html = `
+    <h1 class="page-title">Создание темы</h1>
+
+    <div class="form-group">
+      <label>Название</label>
+      <input type="text" id="topic-title">
+    </div>
+
+    <div class="form-group">
+      <label>Описание</label>
+      <input type="text" id="topic-description">
+    </div>
+
+    <h2 style="margin-top:1.5rem;">Контент</h2>
+
+    <div id="blocks-container"></div>
+
+    <div class="block-add-panel">
+      <button class="btn btn-secondary" data-type="text">Текст</button>
+      <button class="btn btn-secondary" data-type="image">Картинка</button>
+      <button class="btn btn-secondary" data-type="code">Код</button>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="save-topic-btn">Сохранить</button>
+    </div>
+  `;
+
+  document.getElementById('view-create-topic').innerHTML = html;
+  showView('create-topic');
+
+  renderBlocks();
+
+  // обработка кнопок выбора типа
+  document.querySelectorAll('.block-add-panel button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      addBlock(btn.dataset.type);
+    });
+  });
+
+  document.getElementById('save-topic-btn').addEventListener('click', saveTopic);
+}
+function addBlock(type) {
+  topicBlocks.push({
+    id: Date.now(),
+    type,
+    content: ''
+  });
+
+  renderBlocks();
+}
+async function saveTopic() {
+  const title = document.getElementById('topic-title').value.trim();
+  const description = document.getElementById('topic-description').value.trim();
+
+  if (!title) {
+    alert('Введите название');
+    return;
+  }
+
+  const content = buildContent();
+
+  try {
+    await apiClient.admin.createTopic({
+      title,
+      description,
+      content,
+      sortOrder: 0
+    });
+
+    location.hash = '#/';
+  } catch (e) {
+    alert(e.message);
+  }
+}
+function buildContent() {
+  return topicBlocks.map(block => {
+    if (block.type === 'text') {
+      return `<p>${escapeHtml(block.content)}</p>`;
+    }
+
+    if (block.type === 'code') {
+      return `<pre><code>${escapeHtml(block.content)}</code></pre>`;
+    }
+
+    if (block.type === 'image') {
+      return `<img src="${escapeHtml(block.content)}" />`;
+    }
+
+    return '';
+  }).join('\n');
+}
 window.addEventListener('hashchange', render);
 window.addEventListener('load', async () => {
   await loadUser();

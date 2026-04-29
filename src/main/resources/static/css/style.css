@@ -465,3 +465,10 @@ nav a:hover, .btn-link:hover {
     padding: 1rem;
   }
 }
+.block.dragging {
+  opacity: 0.5;
+}
+
+.block.drag-over {
+  border: 2px dashed #4f46e5;
+}
