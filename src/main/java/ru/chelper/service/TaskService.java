@@ -3,6 +3,7 @@ package ru.chelper.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.chelper.dto.TaskDto;
+import ru.chelper.dto.TestCaseDto;
 import ru.chelper.entity.Task;
 import ru.chelper.entity.TestCase;
 import ru.chelper.entity.Topic;
@@ -10,7 +11,10 @@ import ru.chelper.repository.TaskRepository;
 import ru.chelper.repository.TopicRepository;
 import ru.chelper.repository.TestCaseRepository;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -85,6 +89,62 @@ public class TaskService {
         testCaseRepository.save(tc);
     }
 
+    public static List<TestCaseDto> parse(String text) {
+        List<TestCaseDto> result = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile(
+                "Ввод:\\s*([\\s\\S]*?)\\s*Вывод:\\s*([\\s\\S]*?)(?=\\nВвод:|\\z)"
+        );
+
+        Matcher matcher = pattern.matcher(text);
+
+        while (matcher.find()) {
+            TestCaseDto dto = new TestCaseDto();
+            dto.setInput(matcher.group(1).trim());
+            dto.setExpectedOutput(matcher.group(2).trim());
+            result.add(dto);
+        }
+
+        return result;
+    }
+
+    @Transactional
+    public void addTestCasesBulk(Long taskId, List<TestCaseDto> tests) {
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Задача не найдена"));
+
+        List<TestCase> entities = tests.stream().map(t -> {
+            TestCase tc = new TestCase();
+            tc.setTask(task);
+            tc.setInput(t.getInput() != null ? t.getInput() : "");
+            tc.setExpectedOutput(t.getExpectedOutput() != null ? t.getExpectedOutput() : "");
+            return tc;
+        }).toList();
+
+        testCaseRepository.saveAll(entities);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TestCaseDto> getTestsByTaskId(Long taskId) {
+
+        List<TestCase> tests =
+                testCaseRepository
+                        .findByTaskIdOrderByIdAsc(taskId);
+
+        return tests.stream()
+                .map(tc -> {
+
+                    TestCaseDto dto = new TestCaseDto();
+
+                    dto.setInput(tc.getInput());
+                    dto.setExpectedOutput(tc.getExpectedOutput());
+
+                    return dto;
+
+                }).toList();
+    }
+    
     @Transactional(readOnly = true)
     public int getTestCaseCount(Long taskId) {
         return testCaseRepository.findByTaskIdOrderByIdAsc(taskId).size();

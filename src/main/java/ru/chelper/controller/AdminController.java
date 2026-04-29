@@ -3,6 +3,9 @@ package ru.chelper.controller;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import ru.chelper.dto.TestCaseDto;
+import ru.chelper.dto.TestPreviewResponse;
 import ru.chelper.dto.TopicDto;
 import ru.chelper.dto.TaskDto;
 import ru.chelper.service.TaskService;
@@ -81,6 +84,24 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/tasks/{taskId}/tests")
+    public ResponseEntity<?> getTests(
+            @PathVariable Long taskId
+    ) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    taskService.getTestsByTaskId(taskId)
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/tasks/{taskId}/tests")
     public ResponseEntity<?> addTest(@PathVariable Long taskId,
                                      @RequestBody Map<String, String> body) {
@@ -94,6 +115,46 @@ public class AdminController {
             return ResponseEntity.ok(Map.of("message", "Тест добавлен"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    @PostMapping("/tasks/{taskId}/tests/bulk")
+    public ResponseEntity<?> addTestsBulk(
+            @PathVariable Long taskId,
+            @RequestBody List<TestCaseDto> tests
+    ) {
+        try {
+            taskService.addTestCasesBulk(taskId, tests);
+            return ResponseEntity.ok(Map.of("message", "Тесты добавлены"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/tasks/tests/upload")
+    public ResponseEntity<?> uploadTests(@RequestParam("file") MultipartFile file) {
+        try {
+            String text = new String(file.getBytes());
+
+            List<TestCaseDto> tests = TaskService.parse(text);
+
+            if (tests.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Нет валидных тестов"));
+            }
+
+            TestCaseDto first = tests.get(0);
+
+            TestPreviewResponse res = new TestPreviewResponse();
+            res.setTestsCount(tests.size());
+            res.setFirstTest(first);
+            res.setTests(tests);
+
+            return ResponseEntity.ok(res);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

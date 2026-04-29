@@ -2,6 +2,10 @@ let currentUser = null;
 
 let dragIndex = null;
 
+let editingTopicId = null;
+
+let uploadedTests = [];
+
 let topicBlocks = [
   { id: Date.now(), type: 'text', content: '' }
 ];
@@ -93,6 +97,10 @@ async function render() {
       await renderAdmin();
     } else if (path === 'create-topic') {
       renderCreateTopic();
+    } else if (path === 'edit-topic' && id) {
+      await renderCreateTopic(id);
+    } else if (path === 'create-task' && id) {
+      renderCreateTask(id);
     } else {
       await renderMain();
     }
@@ -535,8 +543,8 @@ async function renderAdmin() {
         ${topics.map(t => `
           <li>
             <a href="#/topic/${t.id}" class="topic-card">${escapeHtml(t.title)}</a>
-            <button class="btn btn-secondary edit-topic-btn" data-id="${t.id}">Изменить</button>
-            <button class="btn btn-secondary add-task-btn" data-topic-id="${t.id}">+ Задача</button>
+            <a href="#/edit-topic/${t.id}" class="btn btn-secondary">Изменить</a>
+            <a href="#/create-task/${t.id}" class="btn btn-secondary">+ Задача</a>
           </li>
         `).join('')}
       </ul>
@@ -546,21 +554,6 @@ async function renderAdmin() {
   `;
   document.getElementById('view-admin').innerHTML = html;
   showView('admin');
-  document.getElementById('view-admin').querySelectorAll('.add-task-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const topicId = btn.dataset.topicId;
-      const title = prompt('Название задачи:');
-      if (!title) return;
-      const condition = prompt('Условие задачи (текст):') || '';
-      try {
-        await apiClient.admin.createTask(topicId, { title, condition, sortOrder: 0 });
-        alert('Задача создана. Добавьте минимум 4 теста через API: POST /api/admin/tasks/{taskId}/tests');
-        renderAdmin();
-      } catch (e) {
-        alert(e.message);
-      }
-    });
-  });
   document.getElementById('view-admin').querySelectorAll('.edit-topic-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
@@ -696,22 +689,45 @@ function renderBlocks() {
     el.append(header, input, controls);
     container.appendChild(el);
   });
-}function renderCreateTopic() {
-  topicBlocks = [
-    { id: Date.now(), type: 'text', content: '' }
-  ];
+}async function renderCreateTopic(topicId = null) {
+  editingTopicId = topicId;
+
+  let title = '';
+  let description = '';
+  let content = '';
+
+  // 👉 если редактирование — загружаем тему
+  if (topicId) {
+    try {
+      const topic = await apiClient.topics.get(topicId);
+      title = topic.title || '';
+      description = topic.description || '';
+      content = topic.content || '';
+
+      topicBlocks = parseContentToBlocks(content);
+    } catch (e) {
+      alert('Ошибка загрузки темы');
+      return;
+    }
+  } else {
+    topicBlocks = [
+      { id: Date.now(), type: 'text', content: '' }
+    ];
+  }
 
   const html = `
-    <h1 class="page-title">Создание темы</h1>
+    <h1 class="page-title">
+      ${topicId ? 'Редактирование темы' : 'Создание темы'}
+    </h1>
 
     <div class="form-group">
       <label>Название</label>
-      <input type="text" id="topic-title">
+      <input type="text" id="topic-title" value="${escapeHtml(title)}">
     </div>
 
     <div class="form-group">
       <label>Описание</label>
-      <input type="text" id="topic-description">
+      <input type="text" id="topic-description" value="${escapeHtml(description)}">
     </div>
 
     <h2 style="margin-top:1.5rem;">Контент</h2>
@@ -725,7 +741,9 @@ function renderBlocks() {
     </div>
 
     <div class="form-actions">
-      <button class="btn btn-primary" id="save-topic-btn">Сохранить</button>
+      <button class="btn btn-primary" id="save-topic-btn">
+        ${topicId ? 'Сохранить изменения' : 'Создать тему'}
+      </button>
     </div>
   `;
 
@@ -734,7 +752,6 @@ function renderBlocks() {
 
   renderBlocks();
 
-  // обработка кнопок выбора типа
   document.querySelectorAll('.block-add-panel button').forEach(btn => {
     btn.addEventListener('click', () => {
       addBlock(btn.dataset.type);
@@ -764,17 +781,65 @@ async function saveTopic() {
   const content = buildContent();
 
   try {
-    await apiClient.admin.createTopic({
-      title,
-      description,
-      content,
-      sortOrder: 0
-    });
+    if (editingTopicId) {
+      // ✏️ редактирование
+      await apiClient.admin.updateTopic(editingTopicId, {
+        title,
+        description,
+        content
+      });
+    } else {
+      // ➕ создание
+      await apiClient.admin.createTopic({
+        title,
+        description,
+        content,
+        sortOrder: 0
+      });
+    }
 
     location.hash = '#/';
   } catch (e) {
     alert(e.message);
   }
+}
+function parseContentToBlocks(html) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+
+  const blocks = [];
+
+  wrapper.childNodes.forEach(node => {
+    if (node.nodeType !== 1) return;
+
+    if (node.tagName === 'P') {
+      blocks.push({
+        id: Date.now() + Math.random(),
+        type: 'text',
+        content: node.textContent
+      });
+    }
+
+    if (node.tagName === 'PRE') {
+      blocks.push({
+        id: Date.now() + Math.random(),
+        type: 'code',
+        content: node.innerText
+      });
+    }
+
+    if (node.tagName === 'IMG') {
+      blocks.push({
+        id: Date.now() + Math.random(),
+        type: 'image',
+        content: node.src
+      });
+    }
+  });
+
+  return blocks.length ? blocks : [
+    { id: Date.now(), type: 'text', content: '' }
+  ];
 }
 function buildContent() {
   return topicBlocks.map(block => {
@@ -792,6 +857,114 @@ function buildContent() {
 
     return '';
   }).join('\n');
+}
+function renderCreateTask(topicId) {
+
+  const html = `
+    <h1 class="page-title">Создание задачи</h1>
+
+    <div class="form-group">
+      <label>Название задачи</label>
+      <input type="text" id="task-title">
+    </div>
+
+    <div class="form-group">
+      <label>Условие</label>
+      <textarea id="task-condition" class="code-editor"></textarea>
+    </div>
+
+    <h2 style="margin-top:1.5rem;">Тесты</h2>
+
+    <p class="meta">Загрузите файл с тестами</p>
+
+    <label class="btn btn-secondary" style="cursor:pointer;">
+      Загрузить файл
+      <input type="file" id="tests-file-input" accept=".txt" hidden>
+    </label>
+
+    <div id="tests-preview" style="margin-top:1rem;"></div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="save-task-btn">
+        Сохранить задачу
+      </button>
+    </div>
+  `;
+
+  document.getElementById('view-create-topic').innerHTML = html;
+  showView('create-topic');
+
+  document
+      .getElementById('tests-file-input')
+      .addEventListener('change', handleTestsUpload);
+
+  document
+      .getElementById('save-task-btn')
+      .addEventListener('click', () => saveTask(topicId));
+}
+async function saveTask(topicId) {
+  const title = document.getElementById('task-title').value.trim();
+  const condition = document.getElementById('task-condition').value.trim();
+
+  if (!title) {
+    alert('Введите название задачи');
+    return;
+  }
+
+  if (!uploadedTests.length) {
+    alert('Загрузите файл с тестами');
+    return;
+  }
+
+  try {
+    const task = await apiClient.admin.createTask(topicId, {
+      title,
+      condition,
+      sortOrder: 0
+    });
+
+    await apiClient.admin.addTestsBulk(task.id, uploadedTests);
+
+    alert('Задача создана');
+    location.hash = '#/topic/' + topicId;
+
+  } catch (e) {
+    console.error(e);
+    alert(e.message);
+  }
+}
+async function handleTestsUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res = await apiClient.admin.uploadTests(fd);
+
+    uploadedTests = res.tests;
+
+    renderTestsPreview(res.firstTest, res.testsCount);
+
+  } catch (err) {
+    alert(err.message);
+  }
+}
+function renderTestsPreview(first, count) {
+  document.getElementById('tests-preview').innerHTML = `
+    <div class="block">
+      <h3>Пример теста</h3>
+
+      <p><strong>Ввод:</strong></p>
+      <pre class="code-block">${escapeHtml(first.input)}</pre>
+
+      <p><strong>Вывод:</strong></p>
+      <pre class="code-block">${escapeHtml(first.expectedOutput)}</pre>
+
+      <p class="meta">Всего тестов: ${count}</p>
+    </div>
+  `;
 }
 window.addEventListener('hashchange', render);
 window.addEventListener('load', async () => {
