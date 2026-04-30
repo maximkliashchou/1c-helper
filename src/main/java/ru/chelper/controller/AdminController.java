@@ -11,6 +11,7 @@ import ru.chelper.dto.TaskDto;
 import ru.chelper.service.TaskService;
 import ru.chelper.service.TopicService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -84,24 +85,6 @@ public class AdminController {
         }
     }
 
-    @GetMapping("/tasks/{taskId}/tests")
-    public ResponseEntity<?> getTests(
-            @PathVariable Long taskId
-    ) {
-
-        try {
-
-            return ResponseEntity.ok(
-                    taskService.getTestsByTaskId(taskId)
-            );
-
-        } catch (IllegalArgumentException e) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @PostMapping("/tasks/{taskId}/tests")
     public ResponseEntity<?> addTest(@PathVariable Long taskId,
                                      @RequestBody Map<String, String> body) {
@@ -134,13 +117,13 @@ public class AdminController {
     @PostMapping("/tasks/tests/upload")
     public ResponseEntity<?> uploadTests(@RequestParam("file") MultipartFile file) {
         try {
-            String text = new String(file.getBytes());
+            String text = new String(file.getBytes(), StandardCharsets.UTF_8);
 
             List<TestCaseDto> tests = TaskService.parse(text);
 
-            if (tests.isEmpty()) {
+            if (tests.size() < 4) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Нет валидных тестов"));
+                        .body(Map.of("error", "Минимум 4 теста"));
             }
 
             TestCaseDto first = tests.get(0);

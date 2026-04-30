@@ -54,7 +54,8 @@ const apiClient = {
   tasks: {
     byTopic: (topicId) => api('/topics/' + topicId + '/tasks'),
     get: (id) => api('/tasks/' + id),
-    submit: (taskId, code) => api('/tasks/' + taskId + '/submit', { method: 'POST', body: JSON.stringify({ taskId, code }) })
+    submit: (taskId, code) => api('/tasks/' + taskId + '/submit', { method: 'POST', body: JSON.stringify({ taskId, code }) }),
+    getTests: (taskId) => api('/tasks/' + taskId + '/tests'),
   },
   attempts: {
     my: () => api('/attempts/my'),
@@ -82,6 +83,27 @@ const apiClient = {
     createTask: (topicId, body) => api('/admin/topics/' + topicId + '/tasks', { method: 'POST', body: JSON.stringify(body) }),
     updateTask: (id, body) => api('/admin/tasks/' + id, { method: 'PUT', body: JSON.stringify(body) }),
     deleteTask: (id) => api('/admin/tasks/' + id, { method: 'DELETE' }),
+    addTestsBulk: (taskId, tests) =>
+        api('/tasks/' + taskId + '/tests/bulk', {
+          method: 'POST',
+          body: JSON.stringify({tests})
+        }),
+    uploadTests: (file) => {
+      const form = new FormData();
+      form.append('file', file);
+
+      return fetch(API_BASE + '/admin/tasks/tests/upload', {
+        method: 'POST',
+        headers: authHeaders(), // БЕЗ Content-Type !
+        body: form
+      }).then(async res => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(data?.error || 'Ошибка загрузки тестов');
+        }
+        return data;
+      });
+    },
     addTest: (taskId, input, expectedOutput) => api('/admin/tasks/' + taskId + '/tests', {
       method: 'POST',
       body: JSON.stringify({ input: input || '', expectedOutput })

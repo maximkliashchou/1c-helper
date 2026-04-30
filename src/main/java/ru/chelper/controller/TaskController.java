@@ -87,4 +87,22 @@ public class TaskController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/tasks/{taskId}/tests")
+    public ResponseEntity<?> getTests(
+            @PathVariable Long taskId
+    ) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    taskService.getTestsByTaskId(taskId)
+            );
+
+        } catch (IllegalArgumentException e) {
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 }

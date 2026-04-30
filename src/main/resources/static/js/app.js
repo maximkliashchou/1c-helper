@@ -4,7 +4,9 @@ let dragIndex = null;
 
 let editingTopicId = null;
 
-let uploadedTests = [];
+let createTaskState = {
+  tests: []
+};
 
 let topicBlocks = [
   { id: Date.now(), type: 'text', content: '' }
@@ -192,6 +194,7 @@ async function renderTasks(topicId) {
 
 async function renderTask(taskId) {
   const task = await apiClient.tasks.get(taskId);
+  let testsPreviewHtml = '';
   let topicTitle = '';
   try {
     const topic = await apiClient.topics.get(task.topicId);
@@ -220,11 +223,34 @@ async function renderTask(taskId) {
         </table>
       ` : '';
     } catch (_) {}
+
+    try {
+      const tests = await apiClient.admin.getTests(taskId);
+
+      if (tests.length) {
+        const first = tests[0];
+
+        testsPreviewHtml = `
+      <div class="block" style="margin-top:2rem;">
+        <h3>Пример теста</h3>
+
+        <p><strong>Ввод:</strong></p>
+        <pre class="code-block">${escapeHtml(first.input)}</pre>
+
+        <p><strong>Вывод:</strong></p>
+        <pre class="code-block">${escapeHtml(first.expectedOutput)}</pre>
+
+        <p class="meta">Всего тестов: ${tests.length}</p>
+      </div>
+    `;
+      }
+    } catch (_) {}
   }
   const html = `
     <a href="#/tasks/${task.topicId}" class="back-link">← ${escapeHtml(topicTitle)} — Задачи</a>
     <h1 class="page-title">${escapeHtml(task.title)}</h1>
     <div class="task-condition">${escapeHtml(task.condition)}</div>
+    ${testsPreviewHtml}
     ${!currentUser ? `
       <div class="required-login">
         <p>Чтобы отправить решение, войдите или зарегистрируйтесь.</p>
@@ -296,55 +322,6 @@ async function renderTask(taskId) {
       });
     });
   }
-  if (currentUser) {
-
-    const adminHtml = `
-      <div class="editor-wrap" style="margin-top:2rem;">
-        <h2 style="margin-bottom:0.5rem;">Тесты задачи</h2>
-        <p class="meta">Добавление тест-кейсов для автопроверки</p>
-
-        <label>Input</label>
-        <textarea id="test-input" class="code-editor" placeholder="Входные данные теста..."></textarea>
-
-        <label style="margin-top:1rem;">Expected output</label>
-        <textarea id="test-output" class="code-editor" placeholder="Ожидаемый результат..."></textarea>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-primary" id="add-test-btn">Добавить тест</button>
-        </div>
-
-        <div id="add-test-result"></div>
-      </div>
-    `;
-
-    document.getElementById('view-task').insertAdjacentHTML('beforeend', adminHtml);
-
-    document.getElementById('add-test-btn').addEventListener('click', async () => {
-      const input = document.getElementById('test-input').value;
-      const expectedOutput = document.getElementById('test-output').value;
-      const resultEl = document.getElementById('add-test-result');
-
-      if (!expectedOutput.trim()) {
-        resultEl.innerHTML = '<div class="result-box error">Введите expectedOutput</div>';
-        return;
-      }
-
-      resultEl.innerHTML = '<div class="loading">Добавление теста...</div>';
-
-      try {
-        await apiClient.admin.addTest(taskId, input, expectedOutput);
-
-        resultEl.innerHTML = '<div class="result-box success">✓ Тест успешно добавлен</div>';
-
-        document.getElementById('test-input').value = '';
-        document.getElementById('test-output').value = '';
-
-      } catch (e) {
-        resultEl.innerHTML = '<div class="result-box error">' + escapeHtml(e.message) + '</div>';
-      }
-    });
-  }
-
 }
 
 function renderLogin() {
@@ -550,7 +527,6 @@ async function renderAdmin() {
       </ul>
       <a href="#/create-topic" class="btn btn-primary">+ Добавить тему</a>
     </div>
-    <p class="meta">Редактирование тем и задач: через API (PUT /api/admin/topics/:id, POST /api/admin/topics/:topicId/tasks). Добавление тестов: POST /api/admin/tasks/:taskId/tests с body { "input": "...", "expectedOutput": "..." }. Минимум 4 теста на задачу.</p>
   `;
   document.getElementById('view-admin').innerHTML = html;
   showView('admin');
@@ -860,6 +836,10 @@ function buildContent() {
 }
 function renderCreateTask(topicId) {
 
+  createTaskState = {
+    tests: []
+  };
+
   const html = `
     <h1 class="page-title">Создание задачи</h1>
 
@@ -875,20 +855,22 @@ function renderCreateTask(topicId) {
 
     <h2 style="margin-top:1.5rem;">Тесты</h2>
 
-    <p class="meta">Загрузите файл с тестами</p>
+<p class="meta">Загрузите файл с тестами</p>
 
-    <label class="btn btn-secondary" style="cursor:pointer;">
-      Загрузить файл
-      <input type="file" id="tests-file-input" accept=".txt" hidden>
-    </label>
+<label class="btn btn-secondary" style="cursor:pointer;">
+  Загрузить файл
+  <input type="file" id="tests-file-input" accept=".txt" hidden>
+</label>
 
-    <div id="tests-preview" style="margin-top:1rem;"></div>
+<div id="tests-preview"></div>
+<div id="tests-error" class="error-msg"></div>
 
     <div class="form-actions">
-      <button class="btn btn-primary" id="save-task-btn">
+      <button type="button" class="btn btn-primary" id="save-task-btn">
         Сохранить задачу
       </button>
     </div>
+<p class="meta">Минимум 4 теста на задачу.</p>
   `;
 
   document.getElementById('view-create-topic').innerHTML = html;
@@ -906,13 +888,16 @@ async function saveTask(topicId) {
   const title = document.getElementById('task-title').value.trim();
   const condition = document.getElementById('task-condition').value.trim();
 
+  const errorEl = document.getElementById('tests-error');
+  errorEl.textContent = '';
+
   if (!title) {
-    alert('Введите название задачи');
+    errorEl.textContent = 'Введите название задачи';
     return;
   }
 
-  if (!uploadedTests.length) {
-    alert('Загрузите файл с тестами');
+  if (!createTaskState.tests.length) {
+    errorEl.textContent = 'Сначала загрузите корректный файл с тестами';
     return;
   }
 
@@ -923,32 +908,41 @@ async function saveTask(topicId) {
       sortOrder: 0
     });
 
-    await apiClient.admin.addTestsBulk(task.id, uploadedTests);
+    await apiClient.admin.addTestsBulk(task.id, createTaskState.tests);
 
-    alert('Задача создана');
-    location.hash = '#/topic/' + topicId;
+    // ✅ успех
+    location.hash = '#/admin';
 
   } catch (e) {
-    console.error(e);
-    alert(e.message);
+    errorEl.textContent = e.message || 'Ошибка сохранения задачи';
   }
 }
 async function handleTestsUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const fd = new FormData();
-  fd.append('file', file);
+  const errorEl = document.getElementById('tests-error');
+  const previewEl = document.getElementById('tests-preview');
+
+  errorEl.textContent = '';
+  previewEl.innerHTML = '';
 
   try {
-    const res = await apiClient.admin.uploadTests(fd);
+    const res = await apiClient.admin.uploadTests(file);
 
-    uploadedTests = res.tests;
+    createTaskState.tests = res.tests;
 
-    renderTestsPreview(res.firstTest, res.testsCount);
+    if (!uploadedTests.length) {
+      throw new Error('Файл не содержит тестов');
+    }
+
+    // ✅ показываем превью
+    renderTestsPreview(uploadedTests[0], uploadedTests.length);
 
   } catch (err) {
-    alert(err.message);
+    uploadedTests = [];
+
+    errorEl.textContent = err.message || 'Ошибка загрузки тестов';
   }
 }
 function renderTestsPreview(first, count) {

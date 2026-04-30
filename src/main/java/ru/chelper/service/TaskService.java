@@ -90,18 +90,29 @@ public class TaskService {
     }
 
     public static List<TestCaseDto> parse(String text) {
+
         List<TestCaseDto> result = new ArrayList<>();
 
-        Pattern pattern = Pattern.compile(
-                "Ввод:\\s*([\\s\\S]*?)\\s*Вывод:\\s*([\\s\\S]*?)(?=\\nВвод:|\\z)"
-        );
+        String[] blocks = text.split("(?i)Ввод:");
 
-        Matcher matcher = pattern.matcher(text);
+        for (String block : blocks) {
 
-        while (matcher.find()) {
+            block = block.trim();
+            if (block.isEmpty()) continue;
+
+            String[] parts = block.split("(?i)Вывод:");
+
+            if (parts.length != 2) continue;
+
+            String input = parts[0].trim();
+            String output = parts[1].trim();
+
+            if (input.isEmpty() || output.isEmpty()) continue;
+
             TestCaseDto dto = new TestCaseDto();
-            dto.setInput(matcher.group(1).trim());
-            dto.setExpectedOutput(matcher.group(2).trim());
+            dto.setInput(input);
+            dto.setExpectedOutput(output);
+
             result.add(dto);
         }
 
@@ -111,14 +122,27 @@ public class TaskService {
     @Transactional
     public void addTestCasesBulk(Long taskId, List<TestCaseDto> tests) {
 
+        if (tests == null || tests.size() < 4) {
+            throw new IllegalArgumentException("Минимум 4 теста");
+        }
+
+        for (TestCaseDto t : tests) {
+            if (t.getInput() == null || t.getInput().isBlank()
+                    || t.getExpectedOutput() == null || t.getExpectedOutput().isBlank()) {
+                throw new IllegalArgumentException("Некорректный тест: пустой input или output");
+            }
+        }
+
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Задача не найдена"));
+
+        testCaseRepository.deleteByTaskId(taskId);
 
         List<TestCase> entities = tests.stream().map(t -> {
             TestCase tc = new TestCase();
             tc.setTask(task);
-            tc.setInput(t.getInput() != null ? t.getInput() : "");
-            tc.setExpectedOutput(t.getExpectedOutput() != null ? t.getExpectedOutput() : "");
+            tc.setInput(t.getInput().trim());
+            tc.setExpectedOutput(t.getExpectedOutput().trim());
             return tc;
         }).toList();
 

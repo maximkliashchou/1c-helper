@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
 
+    void deleteByTaskId(Long taskId);
     List<TestCase> findByTaskIdOrderByIdAsc(Long taskId);
 }
