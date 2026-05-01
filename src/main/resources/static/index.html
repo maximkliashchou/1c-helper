@@ -3,45 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Помощник в изучении языка 1С</title>
+  <title>Учебная платформа по 1С</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <header>
-    <div class="container">
-      <a href="#/" class="logo">1С — Помощник</a>
-      <nav>
-        <a href="#/">Главная</a>
-        <span id="nav-guest">
-          <a href="#/login">Вход</a>
-          <a href="#/register">Регистрация</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a href="#/" class="brand">
+        <span class="brand-mark">1C</span>
+        <span>
+          <strong>Учебная платформа</strong>
+          <small>Задачи по 1С</small>
         </span>
+      </a>
+
+      <nav class="sidebar-nav" aria-label="Основная навигация">
+        <a href="#/" class="nav-item" data-nav-path="main">
+          <span class="nav-icon">⌂</span>
+          <span>Темы</span>
+        </a>
         <span id="nav-user" class="hidden">
-          <a href="#/profile">Профиль</a>
-          <a href="#" id="logout-btn">Выход</a>
+          <a href="#/profile" class="nav-item" data-nav-path="profile">
+            <span class="nav-icon">♙</span>
+            <span>Профиль</span>
+          </a>
         </span>
         <span id="nav-admin" class="hidden">
-          <a href="#/admin">Админ</a>
+          <a href="#/admin" class="nav-item" data-nav-path="admin">
+            <span class="nav-icon">⚙</span>
+            <span>Админ-панель</span>
+          </a>
         </span>
-      </nav>
-    </div>
-  </header>
 
-  <main id="app" class="container">
-    <div id="view-loading" class="loading">Загрузка...</div>
-    <div id="view-main" class="hidden"></div>
-    <div id="view-topic" class="hidden"></div>
-    <div id="view-tasks" class="hidden"></div>
-    <div id="view-task" class="hidden"></div>
-    <div id="view-login" class="hidden"></div>
-    <div id="view-register" class="hidden"></div>
-    <div id="view-profile" class="hidden"></div>
-    <div id="view-admin" class="hidden"></div>
-    <div id="view-create-topic" class="hidden"></div>
-  </main>
+        <span class="nav-section-title">Аккаунт</span>
+        <span id="nav-guest">
+          <a href="#/login" class="nav-item" data-nav-path="login">
+            <span class="nav-icon">↪</span>
+            <span>Вход</span>
+          </a>
+          <a href="#/register" class="nav-item" data-nav-path="register">
+            <span class="nav-icon">✚</span>
+            <span>Регистрация</span>
+          </a>
+        </span>
+        <a href="#" id="logout-btn" class="nav-item nav-logout hidden">
+          <span class="nav-icon">↩</span>
+          <span>Выход</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span>© 2025 Учебная платформа по 1С</span>
+        <span>v1.0.0</span>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <label class="top-search" for="global-search-input">
+          <span>⌕</span>
+          <input id="global-search-input" type="search" placeholder="Поиск по темам...">
+        </label>
+        <nav class="top-links" aria-label="Быстрая навигация">
+          <a href="#/" data-nav-path="main">Темы</a>
+          <a href="#/admin" id="top-admin-link" class="hidden" data-nav-path="admin">Админ-панель</a>
+        </nav>
+        <button class="icon-button" type="button" aria-label="Уведомления">•</button>
+        <a href="#/profile" class="user-chip">
+          <span class="user-avatar">1C</span>
+          <span id="current-user-label">Гость</span>
+        </a>
+      </header>
+
+      <main id="app" class="container">
+        <div id="view-loading" class="loading">Загрузка...</div>
+        <div id="view-main" class="hidden"></div>
+        <div id="view-topic" class="hidden"></div>
+        <div id="view-tasks" class="hidden"></div>
+        <div id="view-task" class="hidden"></div>
+        <div id="view-login" class="hidden"></div>
+        <div id="view-register" class="hidden"></div>
+        <div id="view-profile" class="hidden"></div>
+        <div id="view-admin" class="hidden"></div>
+        <div id="view-create-topic" class="hidden"></div>
+      </main>
+    </div>
+  </div>
 
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>

@@ -3,6 +3,7 @@ let currentUser = null;
 let dragIndex = null;
 
 let editingTopicId = null;
+let globalSearchQuery = '';
 
 let createTaskState = {
   tests: []
@@ -22,15 +23,30 @@ function setNav() {
   const guest = document.getElementById('nav-guest');
   const user = document.getElementById('nav-user');
   const admin = document.getElementById('nav-admin');
+  const logout = document.getElementById('logout-btn');
+  const topAdmin = document.getElementById('top-admin-link');
+  const userLabel = document.getElementById('current-user-label');
+  const userChip = document.querySelector('.user-chip');
+  const isAdmin = currentUser && currentUser.roles && currentUser.roles.includes('ADMIN');
+
   if (currentUser) {
     guest.classList.add('hidden');
     user.classList.remove('hidden');
-    admin.classList.toggle('hidden', !currentUser.roles || !currentUser.roles.includes('ADMIN'));
+    logout?.classList.remove('hidden');
+    admin.classList.toggle('hidden', !isAdmin);
+    topAdmin?.classList.toggle('hidden', !isAdmin);
+    if (userLabel) userLabel.textContent = currentUser.username || 'Профиль';
+    if (userChip) userChip.href = '#/profile';
   } else {
     guest.classList.remove('hidden');
     user.classList.add('hidden');
     admin.classList.add('hidden');
+    logout?.classList.add('hidden');
+    topAdmin?.classList.add('hidden');
+    if (userLabel) userLabel.textContent = 'Гость';
+    if (userChip) userChip.href = '#/login';
   }
+  setActiveNav();
 }
 
 async function loadUser() {
@@ -62,6 +78,20 @@ document.getElementById('logout-btn')?.addEventListener('click', (e) => {
   location.hash = '#/';
 });
 
+document.getElementById('global-search-input')?.addEventListener('input', (e) => {
+  globalSearchQuery = e.target.value;
+  const { path } = parseHash();
+  if (path !== 'main') {
+    location.hash = '#/';
+    return;
+  }
+  const localSearch = document.getElementById('search-input');
+  if (localSearch) {
+    localSearch.value = globalSearchQuery;
+    localSearch.dispatchEvent(new Event('input'));
+  }
+});
+
 function escapeHtml(s) {
   if (s == null) return '';
   const div = document.createElement('div');
@@ -75,8 +105,23 @@ function parseHash() {
   return { path: parts[0] || 'main', id: parts[1], id2: parts[2] };
 }
 
+function navPathForRoute(path) {
+  if (path === 'edit-topic' || path === 'create-topic' || path === 'create-task') return 'admin';
+  if (path === 'verify-email') return 'register';
+  return path || 'main';
+}
+
+function setActiveNav() {
+  const { path } = parseHash();
+  const activePath = navPathForRoute(path);
+  document.querySelectorAll('[data-nav-path]').forEach(link => {
+    link.classList.toggle('active', link.dataset.navPath === activePath);
+  });
+}
+
 async function render() {
   const { path, id, id2 } = parseHash();
+  setActiveNav();
   document.getElementById('view-loading').classList.remove('hidden');
   document.querySelectorAll('[id^="view-"]').forEach(el => { if (el.id !== 'view-loading') el.classList.add('hidden'); });
 
@@ -119,8 +164,18 @@ async function renderMain() {
   const topics = await apiClient.topics.list();
 
   const html = `
-    <h1 class="page-title">Темы</h1>
-    <input type="text" class="search-box" id="search-input" placeholder="Поиск по темам...">
+    <div class="page-heading">
+      <div>
+        <h1 class="page-title">Темы</h1>
+        <p class="page-subtitle">Выберите тему для изучения и решения задач</p>
+      </div>
+    </div>
+    <label class="search-panel" for="search-input">
+      <span class="search-icon">⌕</span>
+      <input type="text" class="search-box" id="search-input" placeholder="Поиск по темам...">
+      <button type="button" class="search-clear" id="search-clear" aria-label="Очистить поиск">×</button>
+    </label>
+    <p class="results-count" id="topics-count"></p>
     <ul class="topic-list" id="topics-list"></ul>
   `;
 
@@ -129,20 +184,30 @@ async function renderMain() {
 
   const input = document.getElementById('search-input');
   const list = document.getElementById('topics-list');
+  const count = document.getElementById('topics-count');
+  const clearBtn = document.getElementById('search-clear');
+  const globalSearch = document.getElementById('global-search-input');
+  const iconClasses = ['icon-blue', 'icon-green', 'icon-purple', 'icon-orange'];
+  const icons = ['▯', '▱', '▤', '☆'];
 
   function renderList(filtered) {
+    count.textContent = `Найдено тем: ${filtered.length}`;
+    clearBtn.classList.toggle('hidden', !input.value.trim());
     list.innerHTML = filtered.length
         ? filtered.map((t, i) => `
       <li>
         <a href="#/topic/${t.id}" class="topic-card">
 
-          <div class="topic-icon icon-blue">📘</div>
+          <div class="topic-icon ${iconClasses[i % iconClasses.length]}">${icons[i % icons.length]}</div>
 
           <div class="topic-info">
             <h3>${escapeHtml(t.title)}</h3>
             <p>${escapeHtml(t.description || '')}</p>
 
-            ${t.hasTasks ? `<span class="badge">Есть задачи</span>` : ''}
+            <div class="topic-meta">
+              ${t.hasTasks ? `<span class="badge">Есть задачи</span>` : ''}
+              <span class="badge badge-muted">ID: ${escapeHtml(t.id)}</span>
+            </div>
           </div>
 
           <div class="topic-arrow">›</div>
@@ -150,22 +215,44 @@ async function renderMain() {
         </a>
       </li>
     `).join('')
-        : '<li class="empty-state">Ничего не найдено</li>';
+        : `
+      <li>
+        <div class="empty-search-card">
+          <div class="empty-illustration">⌕</div>
+          <div>
+            <h3>Не нашли нужную тему?</h3>
+            <p>Попробуйте изменить поисковый запрос</p>
+          </div>
+        </div>
+      </li>
+    `;
   }
 
-  // первый рендер
-  renderList(topics);
-
-  // 🔍 поиск без перерендера страницы
-  input.addEventListener('input', (e) => {
-    const q = e.target.value.toLowerCase().trim();
-
+  function applySearch(value) {
+    const q = value.toLowerCase().trim();
     const filtered = topics.filter(t =>
         t.title.toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q)
     );
-
     renderList(filtered);
+  }
+
+  input.value = globalSearchQuery;
+  if (globalSearch) globalSearch.value = globalSearchQuery;
+  applySearch(globalSearchQuery);
+
+  input.addEventListener('input', (e) => {
+    globalSearchQuery = e.target.value;
+    if (globalSearch) globalSearch.value = globalSearchQuery;
+    applySearch(globalSearchQuery);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    globalSearchQuery = '';
+    input.value = '';
+    if (globalSearch) globalSearch.value = '';
+    applySearch('');
+    input.focus();
   });
 }
 
