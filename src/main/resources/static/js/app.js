@@ -114,13 +114,23 @@ async function render() {
 }
 
 async function renderMain() {
-  const q = new URLSearchParams(location.hash.split('?')[1] || '').get('q') || '';
-  const topics = q ? await apiClient.topics.search(q) : await apiClient.topics.list();
+  const topics = await apiClient.topics.list();
+
   const html = `
     <h1 class="page-title">Темы</h1>
-    <input type="text" class="search-box" id="search-input" placeholder="Поиск по темам..." value="${escapeHtml(q)}">
-    <ul class="topic-list">
-      ${topics.length ? topics.map(t => `
+    <input type="text" class="search-box" id="search-input" placeholder="Поиск по темам...">
+    <ul class="topic-list" id="topics-list"></ul>
+  `;
+
+  document.getElementById('view-main').innerHTML = html;
+  document.getElementById('view-main').classList.remove('hidden');
+
+  const input = document.getElementById('search-input');
+  const list = document.getElementById('topics-list');
+
+  function renderList(filtered) {
+    list.innerHTML = filtered.length
+        ? filtered.map(t => `
         <li>
           <a href="#/topic/${t.id}" class="topic-card">
             <h3>${escapeHtml(t.title)}</h3>
@@ -128,14 +138,23 @@ async function renderMain() {
             ${t.hasTasks ? '<p class="meta">Есть задачи</p>' : ''}
           </a>
         </li>
-      `).join('') : '<li class="empty-state">Ничего не найдено</li>'}
-    </ul>
-  `;
-  document.getElementById('view-main').innerHTML = html;
-  document.getElementById('view-main').classList.remove('hidden');
-  document.getElementById('search-input')?.addEventListener('input', (e) => {
-    const v = e.target.value.trim();
-    location.hash = v ? '#/?q=' + encodeURIComponent(v) : '#/';
+      `).join('')
+        : '<li class="empty-state">Ничего не найдено</li>';
+  }
+
+  // первый рендер
+  renderList(topics);
+
+  // 🔍 поиск без перерендера страницы
+  input.addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase().trim();
+
+    const filtered = topics.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
+    );
+
+    renderList(filtered);
   });
 }
 
@@ -225,11 +244,10 @@ async function renderTask(taskId) {
     } catch (_) {}
 
     try {
-      const tests = await apiClient.admin.getTests(taskId);
+      const tests = await apiClient.tasks.getTests(taskId);
 
       if (tests.length) {
         const first = tests[0];
-
         testsPreviewHtml = `
       <div class="block" style="margin-top:2rem;">
         <h3>Пример теста</h3>
@@ -884,39 +902,44 @@ function renderCreateTask(topicId) {
       .getElementById('save-task-btn')
       .addEventListener('click', () => saveTask(topicId));
 }
-async function saveTask(topicId) {
-  const title = document.getElementById('task-title').value.trim();
-  const condition = document.getElementById('task-condition').value.trim();
+  async function saveTask(topicId) {
+    const title = document.getElementById('task-title').value.trim();
+    const condition = document.getElementById('task-condition').value.trim();
 
-  const errorEl = document.getElementById('tests-error');
-  errorEl.textContent = '';
+    const errorEl = document.getElementById('tests-error');
+    errorEl.textContent = '';
 
-  if (!title) {
-    errorEl.textContent = 'Введите название задачи';
-    return;
+    if (!title) {
+      errorEl.textContent = 'Введите название задачи';
+      return;
+    }
+
+    if (!createTaskState.tests.length) {
+      errorEl.textContent = 'Сначала загрузите корректный файл с тестами';
+      return;
+    }
+
+    try {
+      const task = await apiClient.admin.createTask(topicId, {
+        title,
+        condition,
+        sortOrder: 0
+      });
+
+      console.log('TASK:', task);
+
+      await apiClient.admin.addTestsBulk(task.id, createTaskState.tests);
+
+      console.log('TESTS ADDED');
+
+      location.hash = '#/admin';
+
+    } catch (e) {
+      console.error('SAVE TASK ERROR:', e);
+      console.error(e.status, e.data);
+      errorEl.textContent = e.message || 'Ошибка сохранения задачи';
+    }
   }
-
-  if (!createTaskState.tests.length) {
-    errorEl.textContent = 'Сначала загрузите корректный файл с тестами';
-    return;
-  }
-
-  try {
-    const task = await apiClient.admin.createTask(topicId, {
-      title,
-      condition,
-      sortOrder: 0
-    });
-
-    await apiClient.admin.addTestsBulk(task.id, createTaskState.tests);
-
-    // ✅ успех
-    location.hash = '#/admin';
-
-  } catch (e) {
-    errorEl.textContent = e.message || 'Ошибка сохранения задачи';
-  }
-}
 async function handleTestsUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -932,15 +955,15 @@ async function handleTestsUpload(e) {
 
     createTaskState.tests = res.tests;
 
-    if (!uploadedTests.length) {
+    if (!createTaskState.tests.length) {
       throw new Error('Файл не содержит тестов');
     }
 
     // ✅ показываем превью
-    renderTestsPreview(uploadedTests[0], uploadedTests.length);
+    renderTestsPreview(createTaskState.tests[0], createTaskState.tests.length);
 
   } catch (err) {
-    uploadedTests = [];
+    createTaskState.tests = [];
 
     errorEl.textContent = err.message || 'Ошибка загрузки тестов';
   }

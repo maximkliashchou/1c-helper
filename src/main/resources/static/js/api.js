@@ -84,9 +84,9 @@ const apiClient = {
     updateTask: (id, body) => api('/admin/tasks/' + id, { method: 'PUT', body: JSON.stringify(body) }),
     deleteTask: (id) => api('/admin/tasks/' + id, { method: 'DELETE' }),
     addTestsBulk: (taskId, tests) =>
-        api('/tasks/' + taskId + '/tests/bulk', {
+        api('/admin/tasks/' + taskId + '/tests/bulk', {
           method: 'POST',
-          body: JSON.stringify({tests})
+          body: JSON.stringify(tests) // 👈 ВОТ ТАК
         }),
     uploadTests: (file) => {
       const form = new FormData();
