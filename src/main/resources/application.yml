@@ -24,8 +24,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:localhost}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    username: matyane97@gmail.com
+    password: hamm uxms hpto gnex
     properties:
       mail:
         smtp:
