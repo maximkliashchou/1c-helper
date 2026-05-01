@@ -1,15 +1,20 @@
 :root {
-  --bg: #0f1419;
-  --bg-card: #1a2332;
-  --bg-input: #252d3a;
-  --accent: #ff6b35;
-  --accent-hover: #e55a2b;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --border: #30363d;
-  --success: #3fb950;
-  --error: #f85149;
-  --font: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --bg: #f6f8fb;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
+
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+
+  --text: #0f172a;
+  --text-muted: #64748b;
+
+  --border: #e2e8f0;
+
+  --success: #22c55e;
+  --error: #ef4444;
+
+  --font: 'Inter', system-ui, sans-serif;
 }
 
 * {
@@ -19,7 +24,7 @@
 body {
   margin: 0;
   font-family: var(--font);
-  background: var(--bg);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
@@ -35,9 +40,9 @@ a:hover {
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 1rem 1.5rem;
+  padding: 24px;
 }
 
 header {
@@ -145,13 +150,17 @@ nav a:hover, .btn-link:hover {
 }
 
 .topic-card {
-  display: block;
-  padding: 1rem 1.25rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 18px;
+  border-radius: 16px;
+  background: white;
+
+  border: 1px solid #e5eaf1;
+
+  transition: all 0.2s ease;
 }
 
 .topic-card:hover {
@@ -377,9 +386,11 @@ nav a:hover, .btn-link:hover {
 
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background: #e0edff;
+  color: #3b82f6;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
 }
 
 .badge-success {
@@ -409,9 +420,9 @@ nav a:hover, .btn-link:hover {
 }
 
 .page-title {
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-  color: var(--accent);
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .required-login {
@@ -472,3 +483,138 @@ nav a:hover, .btn-link:hover {
 .block.drag-over {
   border: 2px dashed #4f46e5;
 }
+
+/* === UI UPGRADE === */
+
+.topic-card,
+.topic-content,
+.auth-card,
+.profile-header,
+.required-login,
+.task-condition {
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+
+.topic-arrow {
+  font-size: 20px;
+  color: #94a3b8;
+}
+
+.topic-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  border-color: transparent;
+}
+
+.topic-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.search-box {
+  background: white;
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.search-box:focus {
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.search-wrapper {
+  margin: 20px 0 10px;
+}
+
+.btn-primary {
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 16px rgba(59,130,246,0.4);
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.topic-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.topic-info {
+  flex: 1;
+}
+
+.topic-info h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.topic-info p {
+  margin: 4px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.topic-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 20px;
+}
+
+.code-block {
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.form-group input {
+  background: white;
+}
+
+.form-group input:focus {
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.controls {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.block-add-panel {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.icon-blue { background: #e0edff; color: #3b82f6; }
+.icon-green { background: #e7f9ee; color: #22c55e; }
+.icon-purple { background: #f3e8ff; color: #8b5cf6; }
+.icon-orange { background: #fff4e6; color: #f59e0b; }

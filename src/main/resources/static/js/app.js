@@ -130,15 +130,24 @@ async function renderMain() {
 
   function renderList(filtered) {
     list.innerHTML = filtered.length
-        ? filtered.map(t => `
-        <li>
-          <a href="#/topic/${t.id}" class="topic-card">
+        ? filtered.map((t, i) => `
+      <li>
+        <a href="#/topic/${t.id}" class="topic-card">
+
+          <div class="topic-icon icon-blue">📘</div>
+
+          <div class="topic-info">
             <h3>${escapeHtml(t.title)}</h3>
-            ${t.description ? `<p class="meta">${escapeHtml(t.description)}</p>` : ''}
-            ${t.hasTasks ? '<p class="meta">Есть задачи</p>' : ''}
-          </a>
-        </li>
-      `).join('')
+            <p>${escapeHtml(t.description || '')}</p>
+
+            ${t.hasTasks ? `<span class="badge">Есть задачи</span>` : ''}
+          </div>
+
+          <div class="topic-arrow">›</div>
+
+        </a>
+      </li>
+    `).join('')
         : '<li class="empty-state">Ничего не найдено</li>';
   }
 
