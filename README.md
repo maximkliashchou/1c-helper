@@ -77,6 +77,8 @@ java -jar target/1c-helper-1.0.0.jar
 - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 - `SERVER_PORT` (по умолчанию 8080)
 - `JWT_SECRET` — секрет для JWT (в продакшене обязательно задать свой)
+- `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` — SMTP для отправки кодов подтверждения email
+- `SPRING_MAIL_SMTP_AUTH`, `SPRING_MAIL_SMTP_STARTTLS_ENABLE`, `APP_MAIL_FROM` — дополнительные настройки SMTP и адрес отправителя
 
 После первого запуска (при пустой БД) создаётся пользователь **admin** / **admin** (логин/пароль) с ролью ADMIN и начальные данные: три темы («Введение в язык 1С», «Условия и циклы», «Процедуры и функции») с задачами и тестами.
 
@@ -93,7 +95,9 @@ java -jar target/1c-helper-1.0.0.jar
 | GET | `/topics/{id}` | Тема по id |
 | GET | `/topics/{topicId}/tasks` | Задачи темы |
 | GET | `/tasks/{id}` | Задача по id |
-| POST | `/auth/register` | Регистрация (body: username, email, password) |
+| POST | `/auth/register` | Регистрация (body: username, email, password) → отправляет код подтверждения на email |
+| POST | `/auth/verify-email` | Подтверждение email (body: usernameOrEmail, code) → в ответе `token` |
+| POST | `/auth/resend-verification-code` | Повторная отправка кода (body: usernameOrEmail) |
 | POST | `/auth/login` | Вход (body: username, password) → в ответе `token` |
 
 ### С авторизацией (заголовок `Authorization: Bearer <token>`)

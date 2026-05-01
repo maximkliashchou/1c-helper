@@ -8,6 +8,7 @@ public class UserResponse {
     private Long id;
     private String username;
     private String email;
+    private boolean emailVerified;
     private String avatarPath;
     private Set<String> roles;
     private Instant createdAt;
@@ -34,6 +35,14 @@ public class UserResponse {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 
     public String getAvatarPath() {

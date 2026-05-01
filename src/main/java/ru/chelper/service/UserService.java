@@ -21,12 +21,16 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
 
     private final Path uploadDir = Paths.get("uploads", "avatars").toAbsolutePath().normalize();
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailVerificationService = emailVerificationService;
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -55,7 +59,10 @@ public class UserService {
             if (!lower.equals(user.getEmail()) && userRepository.existsByEmailIgnoreCase(lower)) {
                 throw new IllegalArgumentException("Эта почта уже используется");
             }
-            user.setEmail(lower);
+            if (!lower.equals(user.getEmail())) {
+                user.setEmail(lower);
+                emailVerificationService.createAndSendCode(user);
+            }
         }
         if (newPassword != null && !newPassword.isBlank()) {
             if (newPassword.length() < 6) {
@@ -113,6 +120,7 @@ public class UserService {
         r.setId(user.getId());
         r.setUsername(user.getUsername());
         r.setEmail(user.getEmail());
+        r.setEmailVerified(user.isEmailVerified());
         r.setAvatarPath(user.getAvatarPath());
         r.setRoles(user.getRoles().stream().map(Enum::name).collect(Collectors.toSet()));
         r.setCreatedAt(user.getCreatedAt());

@@ -44,7 +44,15 @@ async function api(url, options = {}) {
 const apiClient = {
   auth: {
     login: (username, password) => api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
-    register: (body) => api('/auth/register', { method: 'POST', body: JSON.stringify(body) })
+    register: (body) => api('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    verifyEmail: (usernameOrEmail, code) => api('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ usernameOrEmail, code })
+    }),
+    resendVerificationCode: (usernameOrEmail) => api('/auth/resend-verification-code', {
+      method: 'POST',
+      body: JSON.stringify({ usernameOrEmail })
+    })
   },
   topics: {
     list: () => api('/topics'),

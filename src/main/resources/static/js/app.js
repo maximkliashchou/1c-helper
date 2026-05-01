@@ -93,6 +93,8 @@ async function render() {
       renderLogin();
     } else if (path === 'register') {
       renderRegister();
+    } else if (path === 'verify-email') {
+      renderEmailVerification();
     } else if (path === 'profile') {
       await renderProfile(id || (currentUser && currentUser.username));
     } else if (path === 'admin') {
@@ -386,6 +388,10 @@ function renderLogin() {
     } catch (err) {
       errEl.textContent = err.message || 'Ошибка входа';
       errEl.classList.remove('hidden');
+      if (err.status === 403) {
+        errEl.innerHTML = escapeHtml(err.message || 'Подтвердите email перед входом') +
+            ' <a href="#/verify-email">Ввести код</a>';
+      }
     }
   });
 }
@@ -426,13 +432,76 @@ function renderRegister() {
         email: fd.get('email'),
         password: fd.get('password')
       });
+      errEl.classList.add('hidden');
+      renderEmailVerification(res.username || fd.get('username'), res.email || fd.get('email'));
+    } catch (err) {
+      errEl.textContent = err.message || 'Ошибка регистрации';
+      errEl.classList.remove('hidden');
+    }
+  });
+}
+
+function renderEmailVerification(usernameOrEmail = '', email = '') {
+  const identifier = usernameOrEmail || email || '';
+  document.getElementById('view-register').innerHTML = `
+    <div class="auth-card">
+      <h1>Подтверждение email</h1>
+      <p class="empty-state">
+        Мы отправили 6-значный код${email ? ' на ' + escapeHtml(email) : ' на вашу почту'}.
+        Введите его, чтобы завершить регистрацию.
+      </p>
+      <form id="verify-email-form">
+        <div class="form-group">
+          <label>Имя пользователя или email</label>
+          <input type="text" name="usernameOrEmail" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Код подтверждения</label>
+          <input type="text" name="code" required minlength="6" maxlength="6" pattern="\\d{6}" inputmode="numeric" autocomplete="one-time-code">
+        </div>
+        <div id="verify-email-message" class="empty-state hidden"></div>
+        <div id="verify-email-error" class="error-msg hidden"></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Подтвердить</button>
+          <button type="button" id="resend-code-btn" class="btn btn-secondary">Отправить ещё раз</button>
+        </div>
+      </form>
+    </div>
+  `;
+  showView('register');
+
+  const form = document.getElementById('verify-email-form');
+  form.elements.usernameOrEmail.value = identifier;
+  const errEl = document.getElementById('verify-email-error');
+  const msgEl = document.getElementById('verify-email-message');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    try {
+      const res = await apiClient.auth.verifyEmail(fd.get('usernameOrEmail'), fd.get('code'));
       setToken(res.token);
       await loadUser();
       errEl.classList.add('hidden');
       location.hash = '#/';
     } catch (err) {
-      errEl.textContent = err.message || 'Ошибка регистрации';
+      errEl.textContent = err.message || 'Ошибка подтверждения email';
       errEl.classList.remove('hidden');
+      msgEl.classList.add('hidden');
+    }
+  });
+
+  document.getElementById('resend-code-btn').addEventListener('click', async () => {
+    const fd = new FormData(form);
+    try {
+      const res = await apiClient.auth.resendVerificationCode(fd.get('usernameOrEmail'));
+      msgEl.textContent = res.message || 'Код отправлен повторно';
+      msgEl.classList.remove('hidden');
+      errEl.classList.add('hidden');
+    } catch (err) {
+      errEl.textContent = err.message || 'Не удалось отправить код';
+      errEl.classList.remove('hidden');
+      msgEl.classList.add('hidden');
     }
   });
 }

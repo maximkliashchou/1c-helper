@@ -34,6 +34,16 @@ public class User {
     @Column(length = 255)
     private String avatarPath;
 
+    @Column
+    private Boolean emailVerified = true;
+
+    @Column(length = 255)
+    private String emailVerificationCodeHash;
+
+    private Instant emailVerificationExpiresAt;
+
+    private Instant emailVerificationSentAt;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
@@ -83,6 +93,38 @@ public class User {
 
     public void setAvatarPath(String avatarPath) {
         this.avatarPath = avatarPath;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified == null || emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getEmailVerificationCodeHash() {
+        return emailVerificationCodeHash;
+    }
+
+    public void setEmailVerificationCodeHash(String emailVerificationCodeHash) {
+        this.emailVerificationCodeHash = emailVerificationCodeHash;
+    }
+
+    public Instant getEmailVerificationExpiresAt() {
+        return emailVerificationExpiresAt;
+    }
+
+    public void setEmailVerificationExpiresAt(Instant emailVerificationExpiresAt) {
+        this.emailVerificationExpiresAt = emailVerificationExpiresAt;
+    }
+
+    public Instant getEmailVerificationSentAt() {
+        return emailVerificationSentAt;
+    }
+
+    public void setEmailVerificationSentAt(Instant emailVerificationSentAt) {
+        this.emailVerificationSentAt = emailVerificationSentAt;
     }
 
     public Set<Role> getRoles() {

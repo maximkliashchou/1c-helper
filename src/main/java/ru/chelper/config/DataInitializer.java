@@ -27,6 +27,7 @@ public class DataInitializer {
                 User admin = new User();
                 admin.setUsername("admin");
                 admin.setEmail("admin@localhost");
+                admin.setEmailVerified(true);
                 admin.setPasswordHash(encoder.encode("admin"));
                 admin.getRoles().add(User.Role.ADMIN);
                 admin.getRoles().add(User.Role.USER);

@@ -30,6 +30,13 @@ services:
       POSTGRES_PASSWORD: 1chelper
       CODE_RUNNER_WORK_DIR: /app/run
       CODE_RUNNER_OSCRIPT_COMMAND: /opt/onescript/oscript
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-localhost}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      SPRING_MAIL_SMTP_AUTH: ${SPRING_MAIL_SMTP_AUTH:-true}
+      SPRING_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:-true}
+      APP_MAIL_FROM: ${APP_MAIL_FROM:-no-reply@localhost}
     depends_on:
       postgres:
         condition: service_healthy

@@ -14,14 +14,16 @@ public class UserPrincipal implements UserDetails {
     private final String username;
     private final String email;
     private final String password;
+    private final boolean emailVerified;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String username, String email, String password,
-                         Collection<? extends GrantedAuthority> authorities) {
+                         boolean emailVerified, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.password = password;
+        this.emailVerified = emailVerified;
         this.authorities = authorities;
     }
 
@@ -34,6 +36,7 @@ public class UserPrincipal implements UserDetails {
                 user.getUsername(),
                 user.getEmail(),
                 user.getPasswordHash(),
+                user.isEmailVerified(),
                 authorities
         );
     }
@@ -44,6 +47,10 @@ public class UserPrincipal implements UserDetails {
 
     public String getEmail() {
         return email;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
     }
 
     @Override
@@ -78,6 +85,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return emailVerified;
     }
 }

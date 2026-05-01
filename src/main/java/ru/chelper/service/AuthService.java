@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.chelper.dto.AuthResponse;
 import ru.chelper.dto.LoginRequest;
 import ru.chelper.dto.RegisterRequest;
+import ru.chelper.dto.RegisterPendingResponse;
 import ru.chelper.entity.User;
 import ru.chelper.repository.UserRepository;
 import ru.chelper.security.JwtUtil;
@@ -23,31 +24,57 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
+    public RegisterPendingResponse register(RegisterRequest request) {
+        String username = request.getUsername().trim();
+        String email = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Пользователь с таким именем уже существует");
         }
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("Пользователь с такой почтой уже зарегистрирован");
         }
         User user = new User();
-        user.setUsername(request.getUsername().trim());
-        user.setEmail(request.getEmail().trim().toLowerCase());
+        user.setUsername(username);
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setEmailVerified(false);
         user.getRoles().add(User.Role.USER);
         user = userRepository.save(user);
+        emailVerificationService.createAndSendCode(user);
+        return new RegisterPendingResponse(
+                user.getUsername(),
+                user.getEmail(),
+                true,
+                "Код подтверждения отправлен на email"
+        );
+    }
+
+    @Transactional
+    public AuthResponse verifyEmail(String usernameOrEmail, String code) {
+        User user = emailVerificationService.verifyCode(usernameOrEmail, code);
+        return createAuthResponse(user);
+    }
+
+    public void resendVerificationCode(String usernameOrEmail) {
+        emailVerificationService.resendCode(usernameOrEmail);
+    }
+
+    private AuthResponse createAuthResponse(User user) {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 UserPrincipal.from(user), null, UserPrincipal.from(user).getAuthorities());
         String token = jwtUtil.generateToken(auth);
