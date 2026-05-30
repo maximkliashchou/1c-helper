@@ -365,13 +365,23 @@
     width: 100%;
     border-collapse: collapse;
     margin-top: 1rem;
+
+    border: 1px solid #edf2f7;
+    border-radius: 16px;
+    overflow: hidden;
+
+    background: #fff;
+    box-shadow: var(--shadow-card);
+
+    table-layout: fixed;
   }
 
   .attempts-table th,
   .attempts-table td {
-    padding: 0.6rem 0.75rem;
+    padding: 14px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    vertical-align: middle;
   }
 
   .attempts-table th {
@@ -380,8 +390,12 @@
     font-size: 0.85rem;
   }
 
+  .attempts-table tr:last-child td {
+    border-bottom: none;
+  }
+
   .attempts-table tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(59,130,246,0.03);
   }
 
   .badge {
@@ -1062,18 +1076,21 @@
   }
 
   .attempts-table {
-    display: block;
-    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+
     border: 1px solid #edf2f7;
     border-radius: 16px;
+    overflow: hidden;
+
     background: #fff;
     box-shadow: var(--shadow-card);
+
+    table-layout: auto;
   }
 
-  .attempts-table thead,
-  .attempts-table tbody,
-  .attempts-table tr {
-    width: 100%;
+  .attempts-table th {
+    width: 25%;
   }
 
   .attempts-table th,
