@@ -74,14 +74,27 @@ const apiClient = {
     me: () => api('/profile/me'),
     byUsername: (username) => api('/profile/user/' + encodeURIComponent(username)),
     update: (body) => api('/profile/me', { method: 'PUT', body: JSON.stringify(body) }),
-    uploadAvatar: (file) => {
+    uploadAvatar: async (file) => {
       const form = new FormData();
       form.append('file', file);
-      return fetch(API_BASE + '/profile/me/avatar', {
+
+      const res = await fetch(API_BASE + '/profile/me/avatar', {
         method: 'POST',
         headers: authHeaders(),
         body: form
-      }).then(r => r.ok ? r.json() : r.json().then(d => { throw new Error(d.error || 'Ошибка загрузки'); }));
+      });
+
+      const text = await res.text(); // 👈 сначала текст
+
+      if (!res.ok) {
+        let msg = 'Ошибка загрузки';
+        try {
+          msg = JSON.parse(text).error || msg;
+        } catch (_) {}
+        throw new Error(msg);
+      }
+
+      return text ? JSON.parse(text) : {};
     }
   },
   admin: {

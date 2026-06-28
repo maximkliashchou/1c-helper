@@ -53,16 +53,30 @@ public class UserController {
     }
 
     @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> uploadAvatar(@AuthenticationPrincipal UserPrincipal principal,
-                                           @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadAvatar(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam("file") MultipartFile file) {
+
         if (principal == null) {
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(401)
+                    .body(Map.of("error", "Unauthorized"));
         }
+
         try {
             String path = userService.updateAvatar(principal.getId(), file);
-            return ResponseEntity.ok(Map.of("avatarPath", path));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+
+            if (path == null || path.isBlank()) {
+                return ResponseEntity.status(500)
+                        .body(Map.of("error", "Avatar upload failed"));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "avatarPath", path
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

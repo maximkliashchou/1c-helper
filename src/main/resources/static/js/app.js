@@ -653,10 +653,30 @@ async function renderProfile(username) {
       document.getElementById('avatar-input')?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        // (опционально) локальный предпросмотр сразу
+        const previewUrl = URL.createObjectURL(file);
+
+        const avatarImg = document.querySelector('.profile-header .avatar');
+
+        if (avatarImg && avatarImg.tagName === 'IMG') {
+          avatarImg.src = previewUrl;
+        } else {
+          const newImg = document.createElement('img');
+          newImg.className = 'avatar';
+          newImg.src = previewUrl;
+          avatarImg.replaceWith(newImg);
+        }
+
         try {
           const res = await apiClient.profile.uploadAvatar(file);
+
+          // обновляем пользователя заново (важно!)
           await loadUser();
+
+          // перерендер профиля с сервера
           renderProfile(username);
+
         } catch (err) {
           alert(err.message);
         }
@@ -811,23 +831,31 @@ function renderBlocks() {
     if (block.type === 'image') {
       const wrapper = document.createElement('div');
 
-      const urlInput = document.createElement('input');
-      urlInput.type = 'text';
-      urlInput.placeholder = 'https://...';
-      urlInput.value = block.content;
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
 
-      urlInput.addEventListener('input', (e) => {
-        updateBlock(block.id, e.target.value);
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const url = await resizeImage(file);
+        updateBlock(block.id, url);
         renderBlocks();
       });
 
-      wrapper.appendChild(urlInput);
+      wrapper.appendChild(fileInput);
 
       if (block.content) {
         const img = document.createElement('img');
         img.src = block.content;
+
         img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.display = 'block';
         img.style.marginTop = '10px';
+        img.style.objectFit = 'contain';
+
         wrapper.appendChild(img);
       }
 
@@ -1003,7 +1031,7 @@ function parseContentToBlocks(html) {
 function buildContent() {
   return topicBlocks.map(block => {
     if (block.type === 'text') {
-      return `<p>${escapeHtml(block.content)}</p>`;
+      return `<p>${escapeHtml(block.content).replace(/\n/g, '<br>')}</p>`;
     }
 
     if (block.type === 'code') {
@@ -1147,6 +1175,27 @@ function renderTestsPreview(first, count) {
       <p class="meta">Всего тестов: ${count}</p>
     </div>
   `;
+}
+function resizeImage(file, maxWidth = 1920, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        resolve(URL.createObjectURL(blob));
+      }, 'image/jpeg', quality);
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
 }
 window.addEventListener('hashchange', render);
 window.addEventListener('load', async () => {

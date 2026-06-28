@@ -1311,3 +1311,10 @@
 
     justify-self: end;   /* ключевая строка */
   }
+  .topic-content img,
+  .block img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }

@@ -13,6 +13,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -80,27 +83,39 @@ public class UserService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Файл не выбран");
         }
-        String ext = getExtension(file.getOriginalFilename());
-        if (ext == null || !java.util.Set.of("jpg", "jpeg", "png", "gif", "webp").contains(ext.toLowerCase())) {
-            throw new IllegalArgumentException("Допустимые форматы: jpg, png, gif, webp");
+
+        String original = file.getOriginalFilename();
+        if (original == null) {
+            throw new IllegalArgumentException("Некорректное имя файла");
         }
-        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
+        String ext = getExtension(original);
+        if (ext == null || !Set.of("jpg","jpeg","png","gif","webp").contains(ext.toLowerCase())) {
+            throw new IllegalArgumentException("Недопустимый формат");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
         String filename = UUID.randomUUID() + "." + ext;
         Path target = uploadDir.resolve(filename);
+
         try {
-            Files.copy(file.getInputStream(), target);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new RuntimeException("Не удалось сохранить файл", e);
         }
+
         if (user.getAvatarPath() != null) {
-            Path oldPath = uploadDir.resolve(Paths.get(user.getAvatarPath()).getFileName().toString());
             try {
+                Path oldPath = uploadDir.resolve(Paths.get(user.getAvatarPath()).getFileName().toString());
                 Files.deleteIfExists(oldPath);
-            } catch (IOException ignored) {
-            }
+            } catch (Exception ignored) {}
         }
+
         user.setAvatarPath("/uploads/avatars/" + filename);
-        user.setUpdatedAt(java.time.Instant.now());
+        user.setUpdatedAt(Instant.now());
+
         userRepository.save(user);
         return user.getAvatarPath();
     }

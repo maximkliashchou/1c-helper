@@ -22,6 +22,8 @@ services:
         - linux/amd64
     ports:
       - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
